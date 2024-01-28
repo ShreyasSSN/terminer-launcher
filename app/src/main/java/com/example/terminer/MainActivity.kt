@@ -75,10 +75,10 @@ class MainActivity : AppCompatActivity() {
         val appPackage = packageNames[index]
         val launchIntent = packageManager.getLaunchIntentForPackage(appPackage)
         if (launchIntent!=null){
-            Toast.makeText(applicationContext, "Opening", Toast.LENGTH_SHORT).show()
             startActivity(launchIntent)
+            mainBinding.editTextSearchApp.setText("")
         }else{
-            Toast.makeText(applicationContext, "ERROR", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, "ERROR Opening App", Toast.LENGTH_SHORT).show()
         }
     }
 
