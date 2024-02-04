@@ -11,9 +11,10 @@
         android:id="@+id/textViewAppName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:fontFamily="monospace"
         android:textColor="@color/white"
-        android:textSize="20sp"
-        android:layout_margin="10dp" />
+        android:textSize="20sp" />
 
     <View
         android:layout_width="match_parent"

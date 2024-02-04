@@ -7,15 +7,21 @@
     android:background="@color/black"
     tools:context=".MainActivity">
 
+    <View
+        android:id="@+id/space"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        app:layout_constraintTop_toTopOf="parent"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewApp"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="20dp"
         app:layout_constraintBottom_toTopOf="@+id/constraintLayout"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout2">
 
     </androidx.recyclerview.widget.RecyclerView>
 
@@ -33,6 +39,7 @@
             android:id="@+id/textViewSymbol"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:fontFamily="monospace"
             android:gravity="center"
             android:text=">"
             android:textColor="@color/white"
@@ -47,7 +54,10 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:ems="10"
+            android:fontFamily="monospace"
+            android:layout_marginStart="5dp"
             android:hint="Enter App Name"
+            android:background="@null"
             android:inputType="text"
             android:textColor="@color/white"
             android:textColorHint="@color/grey"
@@ -57,5 +67,64 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.5" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintStart_toEndOf="@+id/linearLayout3"
+        app:layout_constraintTop_toBottomOf="@+id/space">
+
+        <TextClock
+            android:id="@+id/textViewTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="monospace"
+            android:text="time view"
+            android:textColor="@color/radium_green"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/textViewDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="monospace"
+            android:text="date view"
+            android:textColor="@color/radium_green"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayout3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/space">
+
+        <TextView
+            android:id="@+id/timeView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="monospace"
+            android:text="$time :"
+            android:textColor="@color/radium_green"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/DateView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="monospace"
+            android:text="$date :"
+            android:textColor="@color/radium_green"
+            android:textSize="18sp" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
