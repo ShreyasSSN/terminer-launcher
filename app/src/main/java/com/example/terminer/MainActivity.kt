@@ -2,12 +2,16 @@ package com.example.terminer
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.ContactsContract
 import android.text.Editable
 import android.text.TextWatcher
@@ -15,22 +19,29 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.terminer.databinding.ActivityMainBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.Exception
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var mainBinding: ActivityMainBinding
-    private var installedApps = mutableListOf<DrawerItem>()
+    var installedApps = mutableListOf<DrawerItem>()
     private var contactsList = mutableListOf<DrawerItem>()
     private lateinit var drawerItemAdapter: DrawerItemAdapter
     private lateinit var timeUpdater: TimeUpdater
     private var userNumber = ""
+
+    private val PREF_NAME = "InstalledAppsPref"
+    private val KEY_INSTALLED_APPS = "installed_apps"
+    private lateinit var sharedPreferences : SharedPreferences
+    private var installedAppsJson : String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +51,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(view)
 
         mainBinding.recyclerViewApp.layoutManager = LinearLayoutManager(this@MainActivity)
-        getInstalledApps()
+
+        getAppListFromSharedPreference()
 
         drawerItemAdapter = DrawerItemAdapter(listOf(), this)
         mainBinding.recyclerViewApp.adapter = drawerItemAdapter
@@ -64,6 +76,19 @@ class MainActivity : AppCompatActivity() {
             onDateUpdated = { updatedDate ->
                 mainBinding.textViewDate.text = updatedDate
             })
+    }
+
+    private fun getAppListFromSharedPreference() {
+        sharedPreferences =
+            this.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        installedAppsJson = sharedPreferences.getString(KEY_INSTALLED_APPS, null)
+        if (installedAppsJson != null) {
+            installedApps = Gson().fromJson(installedAppsJson, object : TypeToken<List<DrawerItem>>() {}.type)
+        } else {
+            getInstalledApps()
+            val appsJson = Gson().toJson(installedApps)
+            sharedPreferences.edit().putString(KEY_INSTALLED_APPS, appsJson).apply()
+        }
     }
 
     private fun handleSearchTextChange(s: CharSequence?) {
@@ -90,11 +115,23 @@ class MainActivity : AppCompatActivity() {
             searchContactList(searchedText.lowercase())
         } else if (searchedText.lowercase().startsWith("uninstall ")){
             searchAppsToUninstall(searchedText.lowercase())
+        } else if (searchedText.lowercase().startsWith("refresh")){
+            refreshAppList()
         } else {
             val suggestedApps = installedApps.filter {
                 it.name.contains(searchedText.trim(), ignoreCase = true)
             }
             drawerItemAdapter.updateDrawerItemList(suggestedApps)
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun refreshAppList() {
+        showLoadingScreen()
+        mainBinding.editTextSearchApp.setText("")
+        GlobalScope.launch(Dispatchers.Main) {
+            getInstalledApps()
+            hideLoadingScreen()
         }
     }
 
@@ -138,20 +175,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getInstalledApps(){
-        installedApps.clear()
-        val packageListInfo =packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
-        packageListInfo.sortBy {
-            it.applicationInfo.loadLabel(packageManager).toString()
-        }
-        for (packageInfo in packageListInfo){
-            if (!isSystemPackage(packageInfo.applicationInfo)) {
-                val appId = packageInfo.packageName
-                val appName = packageInfo.applicationInfo.loadLabel(packageManager).toString()
 
-                installedApps.add(DrawerItem(id= appId, name = appName, type = ItemType.APP))
-            }
-        }
+    private fun getInstalledApps() {
+        installedApps.clear()
+        val packageListInfo = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
+        installedApps.addAll(packageListInfo
+            .filter { !isSystemPackage(it.applicationInfo) }
+            .map { DrawerItem(id = it.packageName, name = it.applicationInfo.loadLabel(packageManager).toString(), type = ItemType.APP) }
+            .sortedBy { it.name }
+        )
     }
 
     fun onAppClick(appPackageName: String) {
@@ -170,8 +202,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isSystemPackage(applicationInfo: ApplicationInfo): Boolean {
-        return (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) &&
-                !isLauncherApp(applicationInfo.packageName)
+        return (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) && !isLauncherApp(applicationInfo.packageName)
     }
 
     private fun isLauncherApp(packageName: String): Boolean {
@@ -188,7 +219,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("Range")
     fun getContactsDetails(){
-        var uniqueContactList = HashSet<DrawerItem>()
+        val uniqueContactList = HashSet<DrawerItem>()
         val contentResolver = contentResolver
         var contactsCursor: Cursor? = null
 
@@ -219,22 +250,23 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if(requestCode ==101 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-            openContactList()
-        }else{
-            Toast.makeText(this@MainActivity, "Permission Denied", Toast.LENGTH_SHORT)
-                .show()
-        }
-        if(requestCode ==100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-            val intent =Intent(Intent.ACTION_CALL)
-            intent.data = Uri.parse("tel: $userNumber")
-            startActivity(intent)
+        when (requestCode) {
+            101 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openContactList()
+                } else {
+                    Toast.makeText(this@MainActivity, "Permission Denied", Toast.LENGTH_SHORT).show()
+                }
+            }
+            100 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    val intent = Intent(Intent.ACTION_CALL)
+                    intent.data = Uri.parse("tel: $userNumber")
+                    startActivity(intent)
+                }
+            }
         }
     }
 
@@ -243,13 +275,20 @@ class MainActivity : AppCompatActivity() {
         timeUpdater.stopUpdates()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun onUninstallClick(uninstallAppId: String) {
         mainBinding.editTextSearchApp.setText("")
 
+        showLoadingScreen()
+
         // Use a coroutine to perform the uninstallation in the background
-        lifecycleScope.launch {
+        GlobalScope.launch(Dispatchers.Main) {
             try {
                 uninstallAppInBackground(uninstallAppId)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    hideLoadingScreen()
+                    onResume()
+                }, 2000)
             }catch (e: Exception){
                 e.printStackTrace()
             }
@@ -257,26 +296,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun uninstallAppInBackground(uninstallAppId: String) {
+    private fun hideLoadingScreen() {
+        mainBinding.progressBar.isVisible = false
+    }
+
+    private fun showLoadingScreen() {
+        mainBinding.progressBar.isVisible = true
+    }
+
+    private fun uninstallAppInBackground(uninstallAppId: String) {
+        val requestCode = 1
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
             data = Uri.parse("package:$uninstallAppId")
         }
+        startActivityForResult(intent, requestCode)
+    }
 
-        // Start the uninstallation on the background thread
-        withContext(Dispatchers.IO) {
-            try {
-                startActivity(intent)
-                onPause()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Handle exceptions as needed
-            }
-        }
-        onResume()
-        // Refresh the list of installed apps on the main thread
-        withContext(Dispatchers.Main) {
-            getInstalledApps()
-            drawerItemAdapter.updateDrawerItemList(installedApps)
-        }
+    override fun onResume() {
+        super.onResume()
+        getAppListFromSharedPreference()
     }
 }
