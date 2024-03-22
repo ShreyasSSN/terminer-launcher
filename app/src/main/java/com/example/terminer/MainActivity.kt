@@ -131,8 +131,11 @@ class MainActivity : AppCompatActivity() {
         mainBinding.editTextSearchApp.setText("")
         GlobalScope.launch(Dispatchers.Main) {
             getInstalledApps()
+            val appsJson = Gson().toJson(installedApps)
+            sharedPreferences.edit().putString(KEY_INSTALLED_APPS, appsJson).apply()
             hideLoadingScreen()
         }
+
     }
 
     private fun searchAppsToUninstall(searchedApp : String){
@@ -149,10 +152,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun searchContactList(searchContact : String) {
-        val contactName = searchContact.removePrefix("call ")
+        val contactName = searchContact.removePrefix("call ").trim()
         if (contactName.all { it.isLetter() }){
             val suggestedContacts = contactsList.filter {
-                it.name.contains(contactName.trim(), ignoreCase = true)
+                it.name.contains(contactName, ignoreCase = true)
             }
             drawerItemAdapter.updateDrawerItemList(suggestedContacts)
         }else {
