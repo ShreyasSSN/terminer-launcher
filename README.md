@@ -10,7 +10,7 @@ A launcher or just an app drawer to reduce phone's attractive colours.
 <img src="/results/result_3.jpg?raw=true" height="250"></br>
 
 ## Download
-[Terminer.apk](https://github.com/ShreyasSSN/terminer-launcher/releases/download/v1.3/terminer-1.3.apk)
+[Terminer.apk](https://github.com/ShreyasSSN/terminer-launcher/releases/download/v1.3.1/terminer-1.3.1.apk)
 
 ## Versions
 
